@@ -1,0 +1,119 @@
+/* .card-container,
+.judul,
+.header-top {
+    display: none;
+    opacity: 0;
+   transition: bottom 0.4s ease, opacity 0.4 ease;
+    pointer-events: none;
+}
+.card-mesh{
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4 ease;
+}
+.card-mesh.visible {
+  opacity: 1;
+  pointer-events: auto;
+} */
+.advance-setting-mod {
+  display: none;
+  opacity: 0;
+  transition: bottom 0.4s ease, opacity 0.4 ease;
+  pointer-events: none;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.fade-in-popup {
+    animation: fade-in 0.3s ease forwards;
+    display: block !important;
+}
+
+.fade-in-grid {
+    animation: fade-in 0.3s ease forwards;
+    display: grid !important;
+}
+
+.fade-out-popup,
+.fade-out-grid {
+    animation: fade-out 0.3s ease forwards;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.3);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.menu-btn.animate {
+    animation: pulse 0.3s ease;
+}
+
+.menu-btn-rex.animate-pl {
+    animation: pulse 0.3s ease;
+}
+
+#musicBtn.playing i::before {
+    content: "\f899";
+    display: inline-block;
+    animation: soundwave 1s infinite ease-in-out;
+}
+
+@keyframes soundwave {
+    0% {
+        transform: scaleY(1);
+    }
+
+    25% {
+        transform: scaleY(1.3);
+    }
+
+    50% {
+        transform: scaleY(0.8);
+    }
+
+    75% {
+        transform: scaleY(1.5);
+    }
+
+    100% {
+        transform: scaleY(1);
+    }
+}
+
+.grid-fade-in {
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.grid-fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}

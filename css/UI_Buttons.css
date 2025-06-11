@@ -1,0 +1,63 @@
+.menu-btn {
+    background-color: #3b4b5d;
+    width: 50px;
+    height: 50px;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.menu-btn i {
+    color: #ffff;
+    font-size: 20px;
+}
+
+.menu-btn-rex {
+    background-color: #1e2a3a;
+    width: 80px;
+    height: 80px;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.menu-btn-rex i {
+    color: #ffff;
+    font-size: 40px;
+}
+
+.menu-btn-set {
+    background-color: #1e2a3a;
+    width: 35px;
+    height: 35px;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.menu-btn-set i {
+    font-size: 20px;
+}
+
+.menu-setting {
+    background-color: #1e2a3a;
+    width: 40px;
+    height: 40px;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.menu-setting i {
+    font-size: 20px;
+}
+
+.menu-btn-set.rotate i {
+    transform: rotate(180deg);
+}

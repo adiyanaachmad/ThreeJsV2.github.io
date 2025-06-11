@@ -1,0 +1,138 @@
+.card-mesh {
+  background-color: #3b4b5d;
+  color: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: 230px;
+  max-height: 100vh;
+  flex: 0 0 auto;
+  min-width: 250px;
+}
+
+.card-header-mesh {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.card-header-mesh h2 i {
+    background-color: #e9f5ef;
+    color: #34a853;
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.card-header-mesh h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+    color: #fff;
+    font-family: "Montserrat", sans-serif;
+}
+
+.total-count {
+    font-size: 40px;
+    font-weight: 500;
+    color: #fff;
+    font-family: "Saira", sans-serif;
+}
+
+.increase-info {
+    color: #2e9d63;
+    font-size: 16px;
+}
+
+.close-mesh-data i {
+    color: #fff;
+}
+
+.info-data-mesh {
+    text-align: center;
+    align-items: center;
+    background-color: #1e2a3a;
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.progress-bar-mesh {
+    display: flex;
+    height: 15px;
+    gap: 3px;
+    padding: 20px;
+    margin-top: 20px;
+    background-color: #1e2a3a;
+    border-radius: 5px;
+}
+
+.progress-triangles {
+    background-color: #f6c244;
+    width: calc((120 / 365) * 100%);
+    border-radius: 3px;
+}
+
+.progress-vertices {
+    background-color: #5ec7bd;
+    width: calc((200 / 365) * 100%);
+    border-radius: 3px;
+}
+
+.progress-meshes {
+    background-color: #f08080;
+    width: calc((50 / 365) * 100%);
+    border-radius: 3px;
+}
+
+.legend {
+  font-size: 18px;
+  font-weight: 400;
+  color: #fff;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 4px solid #fff;
+}
+
+.legend-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot-mesh {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.value {
+  min-width: 60px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: "Saira", sans-serif;
+}
+
+.dot-triangles {
+    background-color: #f6c244;
+}
+
+.dot-vertices {
+    background-color: #5ec7bd;
+}
+
+.dot-meshes {
+    background-color: #f08080;
+}
