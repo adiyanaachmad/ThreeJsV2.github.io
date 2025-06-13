@@ -3,7 +3,11 @@ import { OrbitControls } from "https://cdn.skypack.dev/three@0.129.0/examples/js
 import { GLTFLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js";
 import { RGBELoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/RGBELoader.js";
 import { DRACOLoader } from "https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/DRACOLoader.js";
-
+import { EffectComposer } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/postprocessing/ShaderPass.js';
+import { WebGLMultisampleRenderTarget } from "https://cdn.skypack.dev/three@0.129.0/build/three.module.js";
 
 // Global Default
 let swingEnabled = false;
@@ -15,6 +19,14 @@ let currentAntialias = false;
 let gridFadeTarget = 1;
 let fadeSpeed = 0.05;
 let hdrTexture = null;
+let bloomComposer, finalComposer;
+let bloomPass;
+
+let bloomParams = {
+  strength: 2.6,
+  radius: 0.6,
+  threshold: 0.6
+};
 
 // Scene setup
 const scene = new THREE.Scene();
@@ -34,9 +46,45 @@ camera.lookAt(new THREE.Vector3(0, 2, 0));
 let renderer;
 let controls;
 
+let composer;
+const bloomLayer = new THREE.Layers();
+bloomLayer.set(1);
+
+const darkMaterial = new THREE.MeshBasicMaterial({
+  color: "black",
+  depthWrite: true,
+  depthTest: true
+});
+const materials = {};
+
+const AdditiveBlendShader = {
+  uniforms: {
+    'tDiffuse': { value: null }, // rendered normal scene
+    'tAdd': { value: null }  // bloom result
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform sampler2D tAdd;
+    varying vec2 vUv;
+
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      vec4 bloom = texture2D(tAdd, vUv);
+      gl_FragColor = vec4(mix(color.rgb, color.rgb + bloom.rgb, bloom.a), color.a);
+    }
+  `
+};
+
 function initRenderer(antialias = false) {
   const previousTarget = controls?.target?.clone();
-  const shadowWasEnabled = renderer?.shadowMap?.enabled ?? false; // simpan status sebelumnya
+  const shadowWasEnabled = renderer?.shadowMap?.enabled ?? false;
 
   if (renderer) {
     renderer.dispose();
@@ -45,9 +93,10 @@ function initRenderer(antialias = false) {
   }
 
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias });
+  renderer.setClearColor(0x000000, 0);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.shadowMap.enabled = shadowWasEnabled; 
+  renderer.shadowMap.enabled = shadowWasEnabled;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.8;
@@ -72,9 +121,55 @@ function initRenderer(antialias = false) {
 
   updateEnvMap();
   controls.update();
+
+  // ✅ Gunakan MSAA hanya jika antialiasing diaktifkan
+  const size = new THREE.Vector2(window.innerWidth, window.innerHeight);
+  const baseRenderTarget = antialias
+    ? new THREE.WebGLMultisampleRenderTarget(size.x, size.y, {
+      format: THREE.RGBAFormat,
+      encoding: THREE.sRGBEncoding,
+    })
+    : new THREE.WebGLRenderTarget(size.x, size.y, {
+      format: THREE.RGBAFormat,
+      encoding: THREE.sRGBEncoding,
+    });
+
+  const renderScene = new RenderPass(scene, camera);
+  bloomPass = new UnrealBloomPass(
+    size,
+    bloomParams.strength,
+    bloomParams.radius,
+    bloomParams.threshold
+  );
+
+  bloomComposer = new EffectComposer(renderer, baseRenderTarget);
+  bloomComposer.renderToScreen = false;
+  bloomComposer.addPass(renderScene);
+  bloomComposer.addPass(bloomPass);
+
+  const finalPass = new ShaderPass(AdditiveBlendShader);
+  finalPass.uniforms['tAdd'].value = bloomComposer.renderTarget2.texture;
+
+  finalComposer = new EffectComposer(renderer, baseRenderTarget.clone());
+  finalComposer.renderToScreen = true;
+  finalComposer.addPass(new RenderPass(scene, camera));
+  finalComposer.addPass(finalPass);
 }
 
+
 initRenderer(false);
+
+setupBloomSliderControls();
+
+let bloomEnabled = false; // Awalnya bloom mati
+
+const bloomToggle = document.getElementById('bloomToggle');
+bloomToggle.checked = false; // pastikan mati saat load
+
+bloomToggle.addEventListener('change', () => {
+  bloomEnabled = bloomToggle.checked;
+});
+
 
 // Grid
 const gridHelper = new THREE.GridHelper(30, 20);
@@ -176,12 +271,33 @@ function applyGlassAndMetalMaterial(child) {
   if (!child.isMesh || !child.material) return;
 
   const matName = child.material.name?.toLowerCase() || "";
+
   const isGlass = matName.includes("glass") || matName.includes("kaca");
   const isMetal = matName.includes("metal") || child.material.metalness > 0;
+  const isBloom = child.userData?.isBloom === true || matName === "bloom_effect";
+
+  // ✅ Terapkan bloom layer hanya jika perlu
+  if (isBloom) {
+    child.userData.isBloom = true;
+    child.layers.enable(1);
+
+    if (!child.material.emissive || child.material.emissive.equals(new THREE.Color(0x000000))) {
+      child.material.emissive = child.material.color.clone();
+      child.material.emissiveIntensity = 1.0;
+      child.material.needsUpdate = true;
+    }
+  }
+
+  if (!isBloom) {
+    child.material.transparent = false;
+    child.material.depthWrite = true;
+    child.material.depthTest = true;
+    child.material.needsUpdate = true;
+  }
 
   if (isGlass) {
     child.material = new THREE.MeshPhysicalMaterial({
-      color: 0xffffff,
+      color: child.material.color || 0xffffff,
       metalness: 0,
       roughness: 0,
       transmission: 1.0,
@@ -190,14 +306,16 @@ function applyGlassAndMetalMaterial(child) {
       clearcoat: 1.0,
       clearcoatRoughness: 0.05,
       reflectivity: 0.15,
-      transparent: true,
+      transparent: true,      
       opacity: 1,
       side: THREE.DoubleSide,
       envMap: envMapGlobal,
       envMapIntensity: 1.0,
-      depthWrite: false
+      depthWrite: false       
     });
-  } else if (isMetal) {
+  }
+
+  else if (isMetal) {
     child.material.roughness = 0.1;
     child.material.metalness = 1.0;
     child.material.envMapIntensity = 0.3;
@@ -228,13 +346,13 @@ function setCameraFrontTop(model) {
 
 const loader = new GLTFLoader();
 const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/'); 
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/');
 loader.setDRACOLoader(dracoLoader);
 
 const objToRender = 'Mini Stadium';
 
 window.addEventListener("DOMContentLoaded", () => {
-  showLoader(); 
+  showLoader();
 
   setTimeout(() => {
     loader.load(`./models/${objToRender}/scene.glb`, (gltf) => {
@@ -245,14 +363,26 @@ window.addEventListener("DOMContentLoaded", () => {
         if (child.isMesh) {
           child.castShadow = false;
           child.receiveShadow = false;
+
+          const matName = child.material?.name?.toLowerCase() || "";
+          if (matName.startsWith("bloom_effect")) {
+            child.userData.isBloom = true;
+          }
+
+          if (child.material?.name === "Bloom_Effect") {
+            child.layers.enable(1); // enable bloom layer
+            child.material.emissive = new THREE.Color(0x00ffff);
+            child.material.emissiveIntensity = 1.5;
+            child.material.needsUpdate = true;
+          }
         }
         applyGlassAndMetalMaterial(child);
       });
 
       scene.add(object);
       setCameraFrontTop(object);
-      updateMeshDataDisplay(object); 
-      
+      updateMeshDataDisplay(object);
+
       const useEnvMap = (hdriToggle && hdriToggle.checked) ? envMapGlobal : null;
       applyEnvMapToMaterials(object, useEnvMap);
 
@@ -269,20 +399,19 @@ window.addEventListener("DOMContentLoaded", () => {
       ground.receiveShadow = false;
       scene.add(ground);
 
-      hideLoader(); 
+      hideLoader();
     }, undefined, (error) => {
-        console.error("Failed to load default model:", error);
-        hideLoader();
+      console.error("Failed to load default model:", error);
+      hideLoader();
 
-        if (!navigator.onLine) {
-          showErrorToast("No Internet Connection", "Failed to load the default model. You are currently offline.");
-        } else {
-          showErrorToast("Default Model Load Failed", "Could not load the default model. Please check if the model exists.");
-        }
+      if (!navigator.onLine) {
+        showErrorToast("No Internet Connection", "Failed to load the default model. You are currently offline.");
+      } else {
+        showErrorToast("Default Model Load Failed", "Could not load the default model. Please check if the model exists.");
+      }
     });
-  }, 10000); 
+  }, 5000);
 });
-
 
 const animationToggle = document.getElementById('animationToggle');
 const levelSelector = document.querySelector('.vertical-level-selector');
@@ -320,8 +449,18 @@ function animate() {
     }
   }
 
-  renderer.render(scene, camera);
+  if (bloomEnabled) {
+    darkenNonBloomed(scene);
+    camera.layers.set(1);
+    bloomComposer.render();
+    camera.layers.set(0);
+    restoreMaterials(scene);
+    finalComposer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
 }
+
 animate();
 
 // Resize handler
@@ -331,6 +470,8 @@ window.addEventListener("resize", () => {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+  bloomComposer.setSize(width, height);
+  finalComposer.setSize(width, height);
 });
 
 // === TOGGLE ANIMASI ===
@@ -342,7 +483,6 @@ animationToggle.addEventListener('change', (e) => {
     swingTime = 0; // reset waktu supaya tidak loncat saat diaktifkan ulang
   }
 });
-
 
 // === PILIH LEVEL KECEPATAN ===
 vCircles.forEach((circle, index) => {
@@ -495,6 +635,15 @@ function loadNewModel(modelName) {
   showLoader();
   removeCurrentModel();
 
+  bloomToggle.checked = false;
+  bloomEnabled = false;
+
+  aaToggle.checked = false;
+  currentAntialias = false;
+  initRenderer(false);
+
+  resetSettingsToDefault(); // Tidak lagi menyentuh renderer
+
   setTimeout(() => {
     const newLoader = new GLTFLoader();
     const newDracoLoader = new DRACOLoader();
@@ -509,7 +658,14 @@ function loadNewModel(modelName) {
         if (child.isMesh) {
           child.castShadow = renderer.shadowMap.enabled;
           child.receiveShadow = renderer.shadowMap.enabled;
-          applyGlassAndMetalMaterial(child);
+
+          // 🌟 Tandai bloom layer jika material name cocok
+          const matName = child.material?.name?.toLowerCase() || "";
+          if (matName.startsWith("bloom_effect")) {
+            child.userData.isBloom = true;
+          }
+
+          applyGlassAndMetalMaterial(child); // <- akan membaca userData.isBloom dan aktifkan efeknya
         }
       });
 
@@ -518,12 +674,14 @@ function loadNewModel(modelName) {
       updateMeshDataDisplay(object);
       updateTitleWithAnimation(modelName);
 
+      // 🌍 HDRI
       const useEnvMap = hdriToggle.checked ? envMapGlobal : null;
       applyEnvMapToMaterials(object, useEnvMap);
-      
+
       directionalLight.target = object;
       scene.add(directionalLight.target);
 
+      // 🪨 Ground
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(100, 100),
         new THREE.ShadowMaterial({ opacity: 0.25 })
@@ -533,11 +691,17 @@ function loadNewModel(modelName) {
       ground.receiveShadow = false;
       scene.add(ground);
 
-      // 👇 DIPINDAH KE SINI
-      resetSettingsToDefault();
+      // ✅ Pastikan bloom layer diaktifkan ulang
+      if (bloomEnabled) {
+        object.traverse((child) => {
+          if (child.isMesh && child.userData?.isBloom) {
+            child.layers.enable(1);
+          }
+        });
+      }
+
       hideLoader();
       isModelLoading = false;
-
     }, undefined, (error) => {
       console.error("Failed to load model:", error);
       hideLoader();
@@ -548,7 +712,7 @@ function loadNewModel(modelName) {
         showErrorToast("Model Load Failed", `The model "${modelName}" is not available.`);
       }
     });
-  }, 5000); 
+  }, 5000);
 }
 
 function updateMeshDataDisplay(model) {
@@ -636,16 +800,16 @@ gridHelper.material.opacity = 1;
 gridHelper.visible = true;
 
 const gridToggle = document.getElementById('gridToggle');
-gridToggle.checked = true; 
+gridToggle.checked = true;
 
 gridToggle.addEventListener('change', (e) => {
   const show = e.target.checked;
-  gridHelper.visible = true; 
+  gridHelper.visible = true;
   gridFadeTarget = show ? 1 : 0;
 });
 
 const hdriToggle = document.getElementById('hdriToggle');
-hdriToggle.checked = false; 
+hdriToggle.checked = false;
 
 hdriToggle.addEventListener('change', (e) => {
   const enabled = e.target.checked;
@@ -679,11 +843,15 @@ function updateEnvMap() {
 
 
 function resetSettingsToDefault() {
-  // Reset Antialiasing
-  const aaToggle = document.getElementById('antialiasingToggle');
-  aaToggle.checked = false;
-  currentAntialias = false;
-  initRenderer(false);
+
+  // Reset bloom ke default
+  bloomParams = {
+    strength: 2.6,
+    radius: 0.6,
+    threshold: 0.6
+  };
+
+  setupBloomSliderControls();
 
   // Reset Shadow
   const shadowToggle = document.getElementById('shadowToggle');
@@ -783,4 +951,76 @@ function updateTitleWithAnimation(newTitle) {
     titleEl.textContent = newTitle;
     titleEl.style.opacity = 1;
   }, 500);
+}
+
+function updateSliderBackground(slider) {
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const val = parseFloat(slider.value);
+  const percent = ((val - min) / (max - min)) * 100;
+  slider.style.background = `linear-gradient(to right, #4ee59e ${percent}%, #3b4b5d ${percent}%)`;
+}
+
+function setupBloomSliderControls() {
+  const strengthSlider = document.getElementById('bloomStrength');
+  const radiusSlider = document.getElementById('bloomRadius');
+  const thresholdSlider = document.getElementById('bloomThreshold');
+
+  const strengthValue = strengthSlider.closest('.bloom-card').querySelector('.bloom-value');
+  const radiusValue = radiusSlider.closest('.bloom-card').querySelector('.bloom-value');
+  const thresholdValue = thresholdSlider.closest('.bloom-card').querySelector('.bloom-value');
+
+  strengthSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    bloomPass.strength = val;
+    bloomParams.strength = val;
+    strengthValue.textContent = val.toString();
+    updateSliderBackground(strengthSlider);
+  });
+
+  radiusSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    bloomPass.radius = val;
+    bloomParams.radius = val;
+    radiusValue.textContent = val.toString();
+    updateSliderBackground(radiusSlider);
+  });
+
+  thresholdSlider.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    bloomPass.threshold = val;
+    bloomParams.threshold = val;
+    thresholdValue.textContent = val.toString();
+    updateSliderBackground(thresholdSlider);
+  });
+
+  strengthSlider.value = bloomParams.strength;
+  radiusSlider.value = bloomParams.radius;
+  thresholdSlider.value = bloomParams.threshold;
+
+  strengthValue.textContent = bloomParams.strength.toString();
+  radiusValue.textContent = bloomParams.radius.toString();
+  thresholdValue.textContent = bloomParams.threshold.toString();
+
+  updateSliderBackground(strengthSlider);
+  updateSliderBackground(radiusSlider);
+  updateSliderBackground(thresholdSlider);
+}
+
+function darkenNonBloomed(obj) {
+  obj.traverse((child) => {
+    if (child.isMesh && bloomLayer.test(child.layers) === false) {
+      materials[child.uuid] = child.material;
+      child.material = darkMaterial;
+    }
+  });
+}
+
+function restoreMaterials(obj) {
+  obj.traverse((child) => {
+    if (child.isMesh && materials[child.uuid]) {
+      child.material = materials[child.uuid];
+      delete materials[child.uuid];
+    }
+  });
 }

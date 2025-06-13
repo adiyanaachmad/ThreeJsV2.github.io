@@ -29,7 +29,7 @@
   <header class="header">
     <div class="header-left">
       <img src="img/event.png" alt="logo" class="logo">
-      <p class="model-name">3D VIEWER <br> V 2.1.4 | BETA VERSION</p>
+      <p class="model-name">3D VIEWER <br> V 2.1.6 | BETA VERSION</p>
     </div>
     <!-- <nav class="nav-tabs">
       <button>Rendering</button>
@@ -196,6 +196,47 @@
         </div>
       </div>
     </div>
+
+    <div class="card-mesh" id="cardMesh">
+      <div class="card-header-mesh">
+        <h2>Bloom Effect</h2>
+        <label class="switch">
+          <input type="checkbox" id="bloomToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <!-- <div class="info-data-mesh">
+        <div class="total-fps">0</div>
+      </div> -->
+      <div class="bloom-card">
+        <div class="bloom-card-header">
+          <h2>Strength</h2>
+          <span class="bloom-value">2.6</span>
+        </div>
+        <div class="slider-bloom">
+          <input type="range" id="bloomStrength" min="0" max="5" step="0.1" value="2.6">
+        </div>
+      </div>
+      <div class="bloom-card">
+        <div class="bloom-card-header">
+          <h2>Radius</h2>
+          <span class="bloom-value">2.6</span>
+        </div>
+        <div class="slider-bloom">
+          <input type="range" id="bloomRadius" min="0" max="1.5" step="0.01" value="0.6">
+        </div>
+      </div>
+      <div class="bloom-card">
+        <div class="bloom-card-header">
+          <h2>Threshold</h2>
+          <span class="bloom-value">2.6</span>
+        </div>
+        <div class="slider-bloom">
+          <input type="range" id="bloomThreshold" min="0" max="1" step="0.01" value="0.6">
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <div class="loader-wrapper" id="loader">

@@ -177,17 +177,117 @@ main {
   position: relative;
 }
 
+.bloom-card{
+  background-color: #1e2a3a;
+  color: #ffff;
+  border-radius: 8px;
+  margin-top: 18px;
+  padding: 20px 12px;
+  max-width: 500px;
+  overflow: hidden;
+}
+
+.bloom-card-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.bloom-card-header h2{
+  font-weight: 500;
+  font-size: 20px;
+  margin: 0;
+}
+
+.bloom-value{
+  background: #3b4b5d;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+  width: 50px;
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
+  font-family: "Saira", sans-serif;
+}
+
+.slider-bloom input[type="range"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    display: block;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(to right, #4ee59e 50%, #3b4b5d 50%);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    border-radius: 8px;
+    outline: none;
+    transition: background 0.3s ease;
+}
+
+.slider-bloom input[type="range"]::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    height: 8px;
+}
+
+.slider-bloom input[type="range"]::-moz-track{
+    -moz-appearance: none;
+    height: 8px;
+}
+
+.slider-bloom input[type="range"]::-ms-track {
+    appearance: none;
+    height: 8px;
+}
+
+.slider-bloom input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    background-color: #4ee59e;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -6px;
+    border: none;
+}
+
+.slider-bloom input[type="range"]::-moz-range-thumb{
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    background-color: #4ee59e;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -6px;
+    border: none;
+}
+
+.slider-bloom input[type="range"]::-ms-thumb {
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    background-color: #4ee59e;
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -6px;
+    border: none;
+}
+
+.slider-bloom input[type="range"]:active::-webkit-slider-thumb {
+    background-color: #ffffff;
+    border: 3px solid #4ee59e;
+}
+
+
 @media screen and (max-width: 768px) {
   .header {
-    zoom: .7;
+    zoom: .9;
   }
   .advance-setting-mod{
     left: 15px;
   }
   .toast{
     top: 10px!important;
-  }
-  .card-wrapper{
-    zoom: .4;
   }
 }

@@ -32,7 +32,8 @@
     font-family: "Montserrat", sans-serif;
 }
 
-.total-count {
+.total-count,
+.total-fps {
     font-size: 40px;
     font-weight: 500;
     color: #fff;
@@ -52,7 +53,7 @@
     text-align: center;
     align-items: center;
     background-color: #1e2a3a;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 14px;
 }
 
@@ -63,7 +64,7 @@
     padding: 20px;
     margin-top: 20px;
     background-color: #1e2a3a;
-    border-radius: 5px;
+    border-radius: 8px;
 }
 
 .progress-triangles {
